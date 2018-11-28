@@ -1,4 +1,4 @@
-# advertising
-Advertising rating system
+# Advertising rating system
+Parsing actual data from Google Adwords(Partners) and Yandex.Direct
 https://prnt.sc/kr79uy
-Express, MySQL, Mongodb, SSR React
+use Express.js, MySQL, Mongodb, SSR React, React Table
