@@ -1,3 +1,4 @@
+//process.env.NODE_ENV = "production";
 const express = require('express');
 const morgan = require('morgan');
 //const bodyParser = require('body-parser');
@@ -35,7 +36,8 @@ app.use('/comment', require('./routes/comments.js') );
   next();
 });*/
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.NODE_PORT || 4000;
 app.listen(PORT, () => {
   console.log(`App started on port ${PORT}`);
 });
+//console.log(`the current env is ${process.env.NODE_ENV}`);

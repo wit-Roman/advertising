@@ -65,7 +65,7 @@ exports.isEmptyObject = function (objectInput) {
     return true;
  }
 exports.validateRecaptcha = function (ip,key) {
-    return new Promise( (resolve) => {
+    return new Promise( (resolve,reject) => {
         const request = require('request');
         const secretKey = "6LfSsm0UAAAAAHxOjILZFi9IFMzHJCPy9D32e2Mu";
         request.get("https://www.google.com/recaptcha/api/siteverify?secret="+secretKey+"&response="+key+"&remoteip="+ip, (error,response,body)=>{
