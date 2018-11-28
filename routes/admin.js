@@ -32,7 +32,7 @@ adminRouter.post('/', (req,res,next) => {
         case "LoadPartners":
           valid =  ( !("options" in body) || !(typeof body.options.stance === "object") || !(typeof body.options.address === "string") );
           funcParam = [body.options.stance[0],body.options.stance[1],body.options.address];
-          parseConstructor( valid,"loadingGoogleApi",funcParam );
+          parseConstructor( valid,"LoadPartners",funcParam );
           break;
         case "LoadAdvse":
           console.log("LoadAdvse");

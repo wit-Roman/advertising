@@ -1,41 +1,59 @@
 const express = require('express');
 const methods = require('../static-methods.js');
-//const url = require('url');
-//const querystring = require('querystring');
 const viewer = require('./../models/viewer.js');
-const ReactDOMServer = require('react-dom/server');
 const viewerRouter = express.Router();
 
-//viewerRouter.get('/favicon.ico', (req, res) => res.status(204));
-
 viewerRouter.get('/', (req,res) => {
-    console.dir(req.params);
+    if ( req.query.hasOwnProperty('p') && ( parseInt(req.query.p) < 0 || req.query.p.length > 2 ) ) 
+        return res.status(404).send("Not Found");
+
     const param = {
-        refresh : (req.query.hasOwnProperty('refresh')) ? false : true,
-        pagination: ( req.query.hasOwnProperty('p') && (typeof req.query.p == "string") && !isNaN(req.query.p) ) ? parseInt(req.query.p) : 0,
+        refresh: (req.query.hasOwnProperty('refresh')) ? false : true,
+        source: (req.query.hasOwnProperty('yand')) ? true : false
     }
     viewer.loadingViewer(param).then( result => {
-        res.status(result.status).render('HTML', {data:result,component:"List"} );
+        console.log(result.status,result.date);
+        res.status(result.status).render('HTML', {
+            data: result,
+            component: (result.status==200)?"List":"NotFound",
+            date: result.date,
+            param: (param.source)?'yand':''
+        })
     }).catch(error => {
         console.dir(error);
         res.status(404).send("Not Found");
     })
-    //const html = ReactDOMServer.renderToString("<div>Hello World</div>");    res.send(html);
 });
 
 viewerRouter.get('/:id/', (req,res) => {
-    console.dir(req.params);
-        const param = {
-            id: ( req.params.hasOwnProperty('id') && !isNaN(req.params.id) ) ? parseInt(req.params.id) : 0,
-            auth: req.signedCookies.auth
+    const isAjax = (req.headers['x-requested-with'] === 'xmlhttprequest');
+    if (isAjax) req.accepts('application/json');
+    
+    if ( req.params.hasOwnProperty('id') && (req.params.id.length > 16 || isNaN(req.params.id)) ) 
+        return res.status(404).send("Not Found");
+
+    const param = {
+        id: parseInt(req.params.id),
+        auth: req.signedCookies.auth
+    }
+    viewer.loadingViewerDetail(param).then( result => {
+        if ( isAjax ) {
+            res.status(result.status).send({
+                data: result,
+                component: (result.status==200)?"Detail":"NotFound",
+                id:param.id
+            });
+        } else {
+            res.status(result.status).render('HTML', {
+                data: result,
+                component: (result.status==200)?"Detail":"NotFound",
+                id:param.id
+            })
         }
-        viewer.loadingViewerDetail(param).then( result => {
-            console.log(result.session);
-            res.status(result.status).render('HTML', {data:result,component:(result.status==200)?"Detail":"NotFound",id:req.params.id} );
-        }).catch(error => {
-            console.dir(error);
-            res.status(404).send("Not Found");
-        })
+    }).catch(error => {
+        console.dir(error);
+        res.status(404).send("Not Found");
+    })
 });
 
 viewerRouter.post('/search/', (req,res,next) => {
@@ -48,31 +66,21 @@ viewerRouter.post('/search/', (req,res,next) => {
     req.on('end', () => {
         const body = JSON.parse(bodyData);
         if (body.type === "search" && req.signedCookies.auth !== false) {
+            const validate = ( body.options.query.length > 1 && body.options.query.length < 16 && typeof body.options.query === "string" );
+            if (!validate) return res.status(400).send("Ошибка ввода");
+            
             const param = {
-                query: body.query
+                query: methods.mysql_real_escape_string(body.options.query)
             }
-            const validate = ( param.query.length < 64 );
+            
+            viewer.loadingViewerSearch(param).then( result => {
+                res.status(result.status).send({ data: result })
+            }).catch(error => {
+                console.dir(error);
+                res.status(404).send("Not Found");
+            })
         }
     });
 });    
 
 module.exports = viewerRouter;
-
-/*
-viewerRouter.get('/:id', (req,res,next) => {
-    console.dir(req.params.id);
-    const param = {
-        refresh : (req.query.hasOwnProperty('refresh')) ? false : true,
-        pagination: ( req.query.hasOwnProperty('p') && !isNaN(req.query.p) ) ? parseInt(req.query.p) : 0,
-        id: ( req.params.hasOwnProperty('id') && !isNaN(req.params.id) ) ? parseInt(req.params.id) : 0,
-        viewerFunc: ( req.params.id ) ? "loadingViewerDetail" : "loadingViewer",
-    };
-
-    viewer[param.viewerFunc](param).then( result => {
-        res.status(result.status).send(result);
-    }).catch(error => {
-        console.dir(error);
-        res.status(404).send("Not Found");
-    });
-
-});*/

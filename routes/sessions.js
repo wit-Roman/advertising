@@ -39,8 +39,6 @@ sessionsRouter.use('/', (req,res,next) => {
             initSession(false);
         }
 
-    //controlSession(req.headers.host,req.query.key);
-
     next();
 });
 
@@ -48,7 +46,7 @@ sessionsRouter.use('/', (req,res,next) => {
 function controlSession(ip,response) {
   console.log(ip,response);                                     
   return new Promise( (resolve) => {
-    const secretKey = "***";
+    const secretKey = "";
     request.get("https://www.google.com/recaptcha/api/siteverify?secret="+secretKey+"&response="+response+"&remoteip="+ip, (error, response, body)=>{
       console.log(body);
       const ans = JSON.parse(body);

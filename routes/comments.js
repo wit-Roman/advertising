@@ -1,8 +1,5 @@
 const express = require('express');
 const methods = require('../static-methods.js');
-//const cookieParser = require('cookie-parser');
-//const url = require('url');
-//const querystring = require('querystring');
 const comment = require('./../models/comment.js');
 const commentsRouter = express.Router();
 
@@ -14,10 +11,6 @@ commentsRouter.post('/post/', (req,res,next) => {
       bodyData += data;
     });
     req.on('end', () => {
-      //const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
-      //req.headers.Url = url.parse(fullUrl);
-      //req.headers.query = querystring.parse(parsedUrl.query);
-      //for(let i = 0,j=0; i < wit_sessions.length; i++){  }
 
       const body = JSON.parse(bodyData);
             
@@ -32,8 +25,9 @@ commentsRouter.post('/post/', (req,res,next) => {
           session: req.cookies.session,
           auth: req.signedCookies.auth
         }
+        console.log(param);
         const validate = (
-          param.id.length < 16 && !isNaN(param.id) &&
+          param.id.toString().length < 16 && !isNaN(param.id) &&
           !isNaN(param.star) &&
           param.name.length < 64 && isNaN(param.name) &&
           methods.validateIP(param.ip) &&
@@ -43,10 +37,13 @@ commentsRouter.post('/post/', (req,res,next) => {
         if (validate) {
           methods.validateRecaptcha(req.headers.host,body.grecaptcha).then( (result) => {
             console.log(result);
-            if ( result !== true ) return res.status(400).send( {recaptcha:result} );
-          });
-          comment.loadingSendComment(param).then( result => {
-            res.status(200).send( {recaptcha:true,status:result} );
+            if ( result !== true ) {
+              return res.status(400).send( {recaptcha:result} );
+            } else {
+              comment.loadingSendComment(param).then( result => {
+                res.status(200).send( {recaptcha:true,status:result} );
+              });
+            }
           });
         } else {
           console.log('Ошибка ввода');
@@ -57,7 +54,6 @@ commentsRouter.post('/post/', (req,res,next) => {
         res.status(400).send('Error');
       }
     });
+});
 
-  });
-
-  module.exports = commentsRouter;
+module.exports = commentsRouter;
