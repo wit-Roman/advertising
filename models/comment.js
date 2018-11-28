@@ -8,10 +8,10 @@ class Comment {
     }
     SQLoperation (SQLquery) {
         this.mysqlConn = mysql.createConnection({
-            host: "localhost",
-            user: "wit",
-            password: "***",
-            database : "adv",
+            host: "",
+            user: "",
+            password: "",
+            database : "",
             multipleStatements: true
         });
         this.mysqlConn.connect();

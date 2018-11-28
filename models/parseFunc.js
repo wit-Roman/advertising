@@ -7,7 +7,7 @@ const mysql = require('mysql');
 const MongoClient = require('mongodb').MongoClient;
 const mysql_real_escape_string = require('./../static-methods.js').mysql_real_escape_string;
 
-exports.loadingGoogleApi = async function (param) {
+exports.LoadPartners = async function (param) {
   console.log('Partners');
   const parser = new Parser(param[2],'Partners');
   return await parser.amortization(param[0],param[1],param[2]);
@@ -51,14 +51,14 @@ class Parser {
   SQLopen() {
     let SQLquery = "";
     if (this.source === "Partners") {
-      MongoClient.connect('mongodb://dbRoman:***@localhost:27017/admin', { useNewUrlParser: true } ).then( connection => {
+      MongoClient.connect('mongodb://', { useNewUrlParser: true } ).then( connection => {
         this.mongodb = connection;
         this.mongodb.db("admin").createCollection(this.TableName);
       }).catch(error => {
         console.log('ERROR:', error);
       });
       
-      SQLquery += "CREATE TABLE IF NOT EXISTS `rang-"+this.TableName+"` ( id BIGINT(11) PRIMARY KEY, num SMALLINT, displayName VARCHAR(64), websiteUrl VARCHAR(64), displayImageUrl VARCHAR(128) ) ENGINE=InnoDB DEFAULT CHARSET=utf8; ";
+      SQLquery += "CREATE TABLE IF NOT EXISTS `rang-"+this.TableName+"` ( id BIGINT(11) PRIMARY KEY, num SMALLINT, displayName VARCHAR(64), websiteUrl VARCHAR(64), displayImageUrl VARCHAR(128), MonthlyBudget INT, industries VARCHAR(256), services VARCHAR(256) ) ENGINE=InnoDB DEFAULT CHARSET=utf8; ";
     } 
     if (this.source === "Advse") {
       SQLquery += "CREATE TABLE IF NOT EXISTS `clients-"+this.TableName+"` ( i INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, num SMALLINT, name VARCHAR(64), websiteUrl VARCHAR(64), showsCount MEDIUMINT, clicksCount MEDIUMINT, CTR DECIMAL(4,1), numer INT ) ENGINE=InnoDB DEFAULT CHARSET=utf8; ";
@@ -70,17 +70,17 @@ class Parser {
       SQLquery += "CREATE TABLE IF NOT EXISTS `rating-"+this.TableName+"` ( i SMALLINT NOT NULL, id BIGINT(11) NULL, num SMALLINT PRIMARY KEY, name VARCHAR(64), websiteName VARCHAR(64), websiteUrl VARCHAR(64), clientsCount MEDIUMINT, companiesCount MEDIUMINT, showsCount MEDIUMINT, clicksCount MEDIUMINT, CTR DECIMAL(4,1), rang DECIMAL(10,3) ) ENGINE=InnoDB DEFAULT CHARSET=utf8; ";
     }
     if (this.source === "CombineTables") {
-      SQLquery += "CREATE TABLE IF NOT EXISTS `used` ( i SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, param VARCHAR(16), name VARCHAR(64) ) ENGINE=InnoDB DEFAULT CHARSET=utf8; TRUNCATE TABLE `used`; ";
+      SQLquery += "CREATE TABLE IF NOT EXISTS `used` ( i SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, param VARCHAR(16), name VARCHAR(64) ) ENGINE=InnoDB DEFAULT CHARSET=utf8; ";
     }
     
     this.SQLoperation(SQLquery);
   }
   SQLoperation (SQLquery) {
     this.mysqlConn = mysql.createConnection({
-      host: "localhost",
-      user: "wit",
-      password: "***",
-      database : "adv",
+      host: "",
+      user: "",
+      password: "",
+      database : "",
       multipleStatements: true
     });
     this.mysqlConn.connect();
@@ -99,12 +99,11 @@ class Parser {
       const _obj = this;
       var i = s;
       let time = setTimeout(async function run() {
-        
         var result =  await _obj[_obj.source](i).then(ready => {
           console.log(ready);
         }).catch(error => {
-          console.dir(error);
-          reject(0);
+          console.log(error);
+          reject(new Error(error));
         });
 
         if (i < f) {
@@ -115,11 +114,12 @@ class Parser {
           if ( _obj._arrResults.every(x => x != 0) ) {
             resolve(1);
           } else {
-            reject(0);
+            resolve(0);
+            console.log(error);
+            reject(new Error(error));
           }
           clearTimeout(time); 
         }
-
       }, 200);
     })
   }
@@ -128,16 +128,13 @@ class Parser {
     return new Promise( (resolve,reject) => {
       const pageSize = 10;
       i = i * pageSize;
-      const gpsMotivations = '***';
-      const requestMetadata_partnersSessionId = "***";
-      const key = "***";
-      const url = "***";
+      const gpsMotivations = '';
+      const requestMetadata_partnersSessionId = "";
+      const key = "";
+      const url = "";
       
       request.get(url, async (error, response, body) => {
-        if(error) { 
-          console.dir(error);
-          reject(0);
-        }
+        if(error) reject(new Error(error));
 
         const dump = JSON.parse(body);        
 
@@ -145,9 +142,15 @@ class Parser {
           let SQLquery = "";      
 
           dump.companies.forEach( (company,index) =>{
-            company.num = parseInt(i+index);
+            //console.log( parseInt(company.convertedMinMonthlyBudget.init), company.industries.join('","'), company.services.join('","') );
+            company.num = parseInt(i+index+1);
+            if ( isNaN(company.convertedMinMonthlyBudget.units) ) company.convertedMinMonthlyBudget.units = 0;
+            company.industries = ( typeof company.industries === "object" ) ? company.industries.join('","') : "";
+            company.services = ( typeof company.services === "object" ) ? company.services.join('","') : "";
+      
             this.mongodb.db("admin").collection(this.TableName).insert(company);
-            SQLquery += "INSERT INTO `rang-"+this.TableName+"` (`id`, `num`, `displayName`, `websiteUrl`, `displayImageUrl` ) VALUES ( "+parseInt(company.id)+", "+company.num+", '"+mysql_real_escape_string(company.localizedInfos[0].displayName)+"', '"+company.websiteUrl+"', '"+company.publicProfile.displayImageUrl+"' ); ";
+            SQLquery += "INSERT INTO `rang-"+this.TableName+"` (`id`, `num`, `displayName`, `websiteUrl`, `displayImageUrl`, `MonthlyBudget`, `industries`, `services` ) VALUES ( "+parseInt(company.id)+", "+company.num+", '"+mysql_real_escape_string(company.localizedInfos[0].displayName)+"', '"+company.websiteUrl+"', '"+company.publicProfile.displayImageUrl+"', "+parseInt(company.convertedMinMonthlyBudget.units)+", '"+company.industries+"', '"+company.services+"' ); ";
+            
           });
           this.SQLoperation(SQLquery);
           console.log(`№ ${i}, STATUS: ${response.statusCode}`);
@@ -165,7 +168,7 @@ class Parser {
       const _obj = this;
       let timeout = setTimeout(function run(p=0,SQLquery="") {
         let options = {
-          url: '***',
+          url: '',
           headers: {'X-Requested-With':'XMLHttpRequest'}
         };
   
@@ -210,7 +213,7 @@ class Parser {
     });
   }
 
-  AdvseTable(file = '***') {
+  AdvseTable(file = './dumps/table.htm') {
     return new Promise( (resolve,reject) => {
       let SQLquery = "";
       const result = fs.readFile(file, 'utf8', (err, contents) => {
@@ -239,20 +242,15 @@ class Parser {
         });
         ( this.SQLoperation(result) ) ? resolve(true) : reject(false);
       });
-      
-      
     })
   }
 
   AdvseTablePage() {
     return new Promise( (resolve,reject) => {
-      const url = '***';
+      const url = '';
   
       request.get(url, async (error, response, body) => {
-        if(error) { 
-          console.dir(error);
-          reject(0);
-        }
+        if(error) reject(new Error(error));
         let SQLquery = "";
         const dom = new JSDOM(body);
         const table = dom.window.document.querySelector("table.agencies_table tbody");
@@ -273,7 +271,7 @@ class Parser {
               const CTR = parseFloat(tr.querySelectorAll("td")[5].innerHTML);
               const rang = parseFloat(tr.querySelectorAll("td")[6].innerHTML);
               const clientsCount = parseInt(tr.querySelectorAll("td a.client_link")[0].innerHTML);
-              SQLquery += "INSERT INTO `rating-"+this.TableName+"` (`i`,`num`,`websiteName`,`websiteUrl`,`name`,`companiesCount`,`showsCount`,`clicksCount`,`CTR`,`rang`,`clientsCount`) VALUES ( "+(index)+", "+num+", '"+websiteName+"', '"+websiteUrl+"', '"+name+"', "+companiesCount+", "+showsCount+", "+clicksCount+", "+CTR+", "+rang+", "+clientsCount+" ); ";
+              SQLquery += "INSERT INTO `rating-"+this.TableName+"` (`i`,`num`,`websiteName`,`websiteUrl`,`name`,`companiesCount`,`showsCount`,`clicksCount`,`CTR`,`rang`,`clientsCount`) VALUES ( "+(index-1)+", "+num+", '"+websiteName+"', '"+websiteUrl+"', '"+name+"', "+companiesCount+", "+showsCount+", "+clicksCount+", "+CTR+", "+rang+", "+clientsCount+" ); ";
             }
           }
         });
@@ -287,15 +285,15 @@ class Parser {
 
   CombineTables(partners,advse,clients,mongo) {
     let SQLquery = "";
-    SQLquery += "INSERT INTO `used` (`param`,`name`) VALUES ( 'partners', '"+partners+"' ); ";
-    SQLquery += "INSERT INTO `used` (`param`,`name`) VALUES ( 'advse', '"+advse+"' ); ";
-    SQLquery += "INSERT INTO `used` (`param`,`name`) VALUES ( 'clients', '"+clients+"' ); ";
-    SQLquery += "INSERT INTO `used` (`param`,`name`) VALUES ( 'mongo', '"+mongo+"' ); ";
+    //TRUNCATE TABLE `used`;
+    SQLquery += "INSERT INTO `used` (`param`,`name`) VALUES ( 'partners', '"+partners+"' ), ( 'advse', '"+advse+"' ), ( 'clients', '"+clients+"' ), ( 'mongo', '"+mongo+"' ); ";
 
     SQLquery += "UPDATE `"+advse+"` INNER JOIN `"+partners+"` ON `"+partners+"`.websiteUrl LIKE concat('%',`"+advse+"`.websiteUrl,'%') OR `"+partners+"`.websiteUrl LIKE concat('%',`"+advse+"`.websiteName,'%') OR `"+partners+"`.displayName LIKE concat('%',`"+advse+"`.name,'%') SET `"+advse+"`.id = `"+partners+"`.id WHERE `"+advse+"`.id IS NULL; ";
+    SQLquery += "UPDATE `"+advse+"` SET `id` = `num` WHERE `id` IS NULL; ";
   
     SQLquery += "SET FOREIGN_KEY_CHECKS=0; ";
-    //SQLquery += "ALTER TABLE `"+advse+"` DROP INDEX `num`; ";
+    //SQLquery += "ALTER TABLE `"+advse+"` DROP FOREIGN KEY `num`; ";
+
     SQLquery += "ALTER TABLE `"+clients+"` ADD INDEX (`num`); ";
     SQLquery += "ALTER TABLE `"+clients+"` ADD FOREIGN KEY (`num`) REFERENCES `"+advse+"`(`num`) ON DELETE NO ACTION ON UPDATE NO ACTION; ";
 

@@ -39,13 +39,6 @@ exports.checkSessions = async function(session,auth,ip,device,deepCheck=false) {
             || (elem.ip === ip && elem.device === device) );
         });
     }
-        /*    if (find === -1 ) {
-                find = wit_sessions.findIndex((elem)=>{ return ; });
-                if (find === -1) {
-                    find = wit_sessions.findIndex((elem)=>{ return (elem.ip === ip && elem.device === device); });
-                }
-            }*/
-    
     return (find === -1)? find : wit_sessions[find];
 }
 
